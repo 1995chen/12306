@@ -9,7 +9,7 @@ import requests
 import TickerConfig
 from agency.agency_tools import proxy
 from config.emailConf import sendEmail
-from config.serverchanConf import sendServerChan
+from config.NotifyConf import sendNotify
 from inter.LiftTicketInit import liftTicketInit
 
 
@@ -54,7 +54,7 @@ class testAll(unittest.TestCase):
         实测server酱是否可用
         :return:
         """
-        sendServerChan(u"server酱 微信通知测试一下")
+        sendNotify(u"微信通知测试一下")
 
     def testUserAgent(self):
         """

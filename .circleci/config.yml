@@ -1,0 +1,113 @@
+version: 2.1
+
+executors:
+  docker-publisher:
+    docker:
+      - image: docker:19
+        auth:
+          username: $DOCKER_USER
+          password: $DOCKER_PASS
+
+jobs:
+  checkout_code:
+    docker:
+      - image: alpine:3.7
+    steps:
+      - run:
+          name: Avoid hosts unknown for github
+          command: |
+            mkdir -p ~/.ssh/ && echo -e "Host github.com\n\tStrictHostKeyChecking no\n" > ~/.ssh/config
+      - run:
+          name: List Files
+          command: |
+            pwd
+            ls -al
+      - checkout
+      - run:
+          name: List Files
+          command: |
+            pwd
+            ls -al
+      # 持久化root目录
+      - persist_to_workspace:
+          root: /root
+          paths:
+            - project
+
+  build_image:
+    executor: docker-publisher
+    steps:
+      - attach_workspace:
+          at: /root
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: Build Image
+          command: |
+            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+            docker build -f $(pwd)/Dockerfile37 -t 1995chen/train_ticket:${CIRCLE_SHA1: 0: 7} $(pwd)
+            docker tag 1995chen/train_ticket:${CIRCLE_SHA1: 0: 7} 1995chen/train_ticket:latest
+      - run:
+          name: Archive Docker image
+          command: |
+            docker save -o image.tar 1995chen/train_ticket:${CIRCLE_SHA1: 0: 7}
+      - run:
+          name: Push Image
+          command: |
+            docker push 1995chen/train_ticket:${CIRCLE_SHA1: 0: 7}
+            docker push 1995chen/train_ticket:latest
+      # 持久化root目录
+      - persist_to_workspace:
+          root: /root
+          paths:
+            - project
+
+  tag_release_image:
+    executor: docker-publisher
+    steps:
+      - attach_workspace:
+          at: /root
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: Load archived Docker image
+          command: docker load -i image.tar
+      - run:
+          name: Tag & Push Image
+          command: |
+            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+            docker tag 1995chen/train_ticket:${CIRCLE_SHA1: 0: 7} 1995chen/train_ticket:$CIRCLE_TAG
+            docker push 1995chen/train_ticket:$CIRCLE_TAG
+
+workflows:
+  staging:
+    jobs:
+      - checkout_code
+      - build_image:
+          requires:
+            - checkout_code
+          context:
+            - docker-hub-creds
+  production:
+    jobs:
+      - checkout_code:
+          # this yaml anchor is setting these values to "filters-production"
+          filters: &filters-production
+            branches:
+              ignore: /.*/
+            tags:
+              only: /.*/
+      - build_image:
+          requires:
+            - checkout_code
+          context:
+            - docker-hub-creds
+          filters:
+            <<: *filters-production
+      - tag_release_image:
+          requires:
+            - build_image
+          context:
+            - docker-hub-creds
+          filters:
+            <<: *filters-production

@@ -22,9 +22,9 @@ if __name__ == '__main__':
         select_ticket_info.select().main()
     elif args.operate == "t":
         from config.emailConf import sendEmail
-        from config.serverchanConf import sendServerChan
+        from config.NotifyConf import sendNotify
         sendEmail(u"订票小助手测试一下")
-        sendServerChan("订票小助手测试一下")
+        sendNotify("订票小助手测试一下")
     elif args.operate == "c":
         from agency.cdn_utils import filterCdn
         filterCdn()
