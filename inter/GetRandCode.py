@@ -1,4 +1,5 @@
-# coding=utf-8
+# -*- coding: utf-8 -*-
+
 from PIL import Image
 
 from config.urlConf import urls

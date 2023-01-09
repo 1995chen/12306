@@ -1,4 +1,5 @@
-# coding: utf-8
+# -*- coding: utf-8 -*-
+
 import TickerConfig
 
 if TickerConfig.AUTO_CODE_TYPE == 2:
